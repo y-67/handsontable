@@ -10,14 +10,8 @@ class IndexMapper {
     this.mapCollection = new MapCollection();
     this.indexesSequenceMap = new IndexMap();
 
-    const updateCache = () => {
-      if (this.silent === false) {
-        this.rebuildCache();
-      }
-    };
-
-    this.indexesSequenceMap.addLocalHook('mapChanged', updateCache);
-    this.skipCollection.addLocalHook('collectionChanged', updateCache);
+    this.indexesSequenceMap.addLocalHook('mapChanged', () => this.rebuildCache());
+    this.skipCollection.addLocalHook('collectionChanged', () => this.rebuildCache());
 
     this.notSkippedIndexesCache = null;
     this.skippedIndexesCache = null;
@@ -246,9 +240,10 @@ class IndexMapper {
    * Rebuild cache for all indexes.
    */
   rebuildCache() {
-    this.rebuildSkippedIndexesCache();
-    this.rebuildNotSkippedIndexesCache();
-
+    if (this.silent === false) {
+      this.rebuildSkippedIndexesCache();
+      this.rebuildNotSkippedIndexesCache();
+    }
     // TODO: call this.runHook('cacheUpdated');
   }
 
