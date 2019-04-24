@@ -2,15 +2,23 @@ import { arrayFilter, arrayMap, arrayReduce, pivot } from './../helpers/array';
 import IndexMap from './maps/indexMap';
 import MapCollection from './mapCollection';
 
-const INDEXES_SEQUENCE_KEY = 'sequence';
-
 class IndexMapper {
   constructor() {
-    this.indexToIndexCollection = new MapCollection([
-      [INDEXES_SEQUENCE_KEY, new IndexMap()],
-    ]);
+    this.silent = false;
 
-    this.skipCollection = new MapCollection([], () => this.rebuildCache());
+    this.skipCollection = new MapCollection();
+    this.mapCollection = new MapCollection();
+    this.indexesSequenceMap = new IndexMap();
+
+    const updateCache = () => {
+      if (this.silent === false) {
+        this.rebuildCache();
+      }
+    };
+
+    this.indexesSequenceMap.addLocalHook('mapChanged', updateCache);
+    this.skipCollection.addLocalHook('collectionChanged', updateCache);
+
     this.notSkippedIndexesCache = null;
     this.skippedIndexesCache = null;
   }
@@ -56,10 +64,11 @@ class IndexMapper {
    * @param {Number} [length] Custom generated map length.
    */
   initToLength(length = this.getNumberOfIndexes()) {
-    this.indexToIndexCollection.initToLength(length);
-    this.skipCollection.initToLength(length);
-
-    this.rebuildCache();
+    this.batch((indexMapper) => {
+      indexMapper.mapCollection.initToLength(length);
+      indexMapper.skipCollection.initToLength(length);
+      indexMapper.indexesSequenceMap.init(length);
+    });
   }
 
   /**
@@ -68,7 +77,7 @@ class IndexMapper {
    * @returns {Array}
    */
   getIndexesSequence() {
-    return this.indexToIndexCollection.get(INDEXES_SEQUENCE_KEY).getValues();
+    return this.indexesSequenceMap.getValues();
   }
 
   /**
@@ -77,7 +86,7 @@ class IndexMapper {
    * @param {Array} indexes Physical row indexes.
    */
   setIndexesSequence(indexes) {
-    this.indexToIndexCollection.get(INDEXES_SEQUENCE_KEY).setValues(indexes);
+    this.indexesSequenceMap.setValues(indexes);
 
     this.rebuildNotSkippedIndexesCache();
   }
@@ -132,7 +141,7 @@ class IndexMapper {
   /**
    * Get length of all indexes NOT skipped in the process of rendering.
    *
-   * @returns {Array}
+   * @returns {Number}
    */
   getNotSkippedIndexesLength() {
     return this.getNotSkippedIndexes().length;
@@ -159,9 +168,8 @@ class IndexMapper {
     }
 
     const physicalMovedIndexes = arrayMap(movedIndexes, row => this.getPhysicalIndex(row));
-    const sequenceOfIndexes = this.indexToIndexCollection.get(INDEXES_SEQUENCE_KEY);
 
-    sequenceOfIndexes.filterIndexes(physicalMovedIndexes);
+    this.indexesSequenceMap.filterIndexes(physicalMovedIndexes);
 
     // When item(s) are moved after the last item we assign new index.
     let indexNumber = this.getNumberOfIndexes();
@@ -181,7 +189,9 @@ class IndexMapper {
       return skippedRowsSum;
     }, 0);
 
-    sequenceOfIndexes.insertIndexes(finalIndex + skippedRowsToTargetIndex, physicalMovedIndexes);
+    this.indexesSequenceMap.insertIndexes(finalIndex + skippedRowsToTargetIndex, physicalMovedIndexes);
+
+    this.rebuildCache();
   }
 
   /**
@@ -197,10 +207,11 @@ class IndexMapper {
     const insertionIndex = this.getIndexesSequence().includes(nthVisibleIndex) ? this.getIndexesSequence().indexOf(nthVisibleIndex) : this.getNumberOfIndexes();
     const insertedIndexes = arrayMap(new Array(amountOfIndexes).fill(firstInsertedPhysicalIndex), (nextIndex, stepsFromStart) => nextIndex + stepsFromStart);
 
-    this.indexToIndexCollection.updateIndexesAfterInsertion(insertionIndex, insertedIndexes);
-    this.skipCollection.updateIndexesAfterInsertion(insertionIndex, insertedIndexes);
-
-    this.rebuildCache();
+    this.batch((indexMapper) => {
+      indexMapper.indexesSequenceMap.addValueAndReorganize(insertionIndex, insertedIndexes);
+      indexMapper.mapCollection.updateIndexesAfterInsertion(insertionIndex, insertedIndexes);
+      indexMapper.skipCollection.updateIndexesAfterInsertion(insertionIndex, insertedIndexes);
+    });
   }
 
   /**
@@ -210,10 +221,11 @@ class IndexMapper {
    * @param {Array} removedIndexes List of removed indexes.
    */
   updateIndexesAfterRemoval(removedIndexes) {
-    this.indexToIndexCollection.updateIndexesAfterRemoval(removedIndexes);
-    this.skipCollection.updateIndexesAfterRemoval(removedIndexes);
-
-    this.rebuildCache();
+    this.batch((indexMapper) => {
+      indexMapper.indexesSequenceMap.removeValuesAndReorganize(removedIndexes);
+      indexMapper.mapCollection.updateIndexesAfterRemoval(removedIndexes);
+      indexMapper.skipCollection.updateIndexesAfterRemoval(removedIndexes);
+    });
   }
 
   /**
@@ -236,6 +248,25 @@ class IndexMapper {
   rebuildCache() {
     this.rebuildSkippedIndexesCache();
     this.rebuildNotSkippedIndexesCache();
+
+    // TODO: call this.runHook('cacheUpdated');
+  }
+
+  /**
+   * indexMapper.batch(function() {
+   *   trimMapper.removeItems();
+   *   trimMapper.addItems();
+   * }
+   * @param callback
+   */
+  batch(callback) {
+    this.silent = true;
+
+    callback(this);
+
+    this.silent = false;
+
+    this.rebuildCache();
   }
 }
 
