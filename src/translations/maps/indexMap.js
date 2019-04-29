@@ -5,11 +5,8 @@ import BaseMap from './baseMap';
  * Map from visual index to physical index.
  */
 class IndexMap extends BaseMap {
-  constructor(initValueOrFn = index => index) {
+  constructor(initValueOrFn = (_, index) => index) {
     super(initValueOrFn);
-
-    this.list = [];
-    this.initValueOrFn = initValueOrFn;
   }
 
   /**

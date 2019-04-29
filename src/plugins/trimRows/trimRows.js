@@ -76,7 +76,7 @@ class TrimRows extends BasePlugin {
       return;
     }
 
-    this.trimmedRowsMap = this.translator.getRowIndexMapper().skipCollection.register('trimRows', new ValueMap(false));
+    this.trimmedRowsMap = this.translator.getRowIndexMapper().skipCollection.register('trimRows', new ValueMap());
 
     this.addHook('afterLoadData', () => this.onAfterLoadData());
 

@@ -26,6 +26,15 @@ class MapCollection {
   }
 
   /**
+   * Get collection size.
+   *
+   * @returns {Number}
+   */
+  getLength() {
+    return this.mappings.size;
+  }
+
+  /**
    * Get indexes list by it's name.
    *
    * @param {String} name Name of the indexes list.

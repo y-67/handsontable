@@ -136,7 +136,7 @@ class Filters extends BasePlugin {
       return;
     }
 
-    this.filtersRowsMap = this.translator.getRowIndexMapper().skipCollection.register('filters', new ValueMap(false));
+    this.filtersRowsMap = this.translator.getRowIndexMapper().skipCollection.register('filters', new ValueMap());
 
     this.dropdownMenuPlugin = this.hot.getPlugin('dropdownMenu');
 

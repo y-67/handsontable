@@ -2,12 +2,13 @@ import { arrayMap } from '../../helpers/array';
 import { mixin } from '../../helpers/object';
 import { isFunction } from '../../helpers/function';
 import localHooks from './../../mixins/localHooks';
+import { isDefined } from '../../helpers/mixed';
 
 /**
  * Map from index to value.
  */
 class BaseMap {
-  constructor(initValueOrFn = index => index) {
+  constructor(initValueOrFn = void 0) {
     this.list = [];
     this.initValueOrFn = initValueOrFn;
   }
@@ -18,13 +19,13 @@ class BaseMap {
    * @param {Number} length New length of list.
    */
   init(length) {
-    this.list = arrayMap(new Array(length), (_, indexOfArray) => {
-      if (isFunction(this.initValueOrFn)) {
-        return this.initValueOrFn(indexOfArray);
-      }
+    this.list = new Array(length);
 
-      return this.initValueOrFn;
-    });
+    if (isFunction(this.initValueOrFn)) {
+      this.list = arrayMap(this.list, this.initValueOrFn);
+    } else if (isDefined(this.initValueOrFn)) {
+      this.list = this.list.fill(this.initValueOrFn);
+    }
 
     this.runLocalHooks('mapChanged');
 
@@ -37,7 +38,7 @@ class BaseMap {
    * @returns {Array}
    */
   getValues() {
-    return this.list.slice();
+    return this.list;
   }
 
   /**
@@ -46,7 +47,7 @@ class BaseMap {
    * @param {Array} values List of set values.
    */
   setValues(values) {
-    this.list = values.slice();
+    this.list = values;
 
     this.runLocalHooks('mapChanged');
   }

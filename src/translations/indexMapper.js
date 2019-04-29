@@ -1,4 +1,4 @@
-import { arrayFilter, arrayMap, arrayReduce, pivot } from './../helpers/array';
+import { arrayFilter, arrayMap, arrayReduce } from './../helpers/array';
 import IndexMap from './maps/indexMap';
 import MapCollection from './mapCollection';
 
@@ -40,13 +40,9 @@ class IndexMapper {
    */
   getVisualIndex(physicalIndex) {
     const visibleIndexes = this.getNotSkippedIndexes();
-    let visualIndex = null;
+    const visualIndex = visibleIndexes.indexOf(physicalIndex);
 
-    if (!this.isSkipped(physicalIndex) && this.getIndexesSequence().includes(physicalIndex)) {
-      visualIndex = visibleIndexes.indexOf(physicalIndex);
-    }
-
-    return visualIndex;
+    return visualIndex > -1 ? visualIndex : null;
   }
 
   /**
@@ -93,7 +89,13 @@ class IndexMapper {
       return this.notSkippedIndexesCache;
     }
 
-    return arrayFilter(this.getIndexesSequence(), index => this.isSkipped(index) === false);
+    let result = this.getIndexesSequence();
+
+    if (this.hasSkippedIndexes()) {
+      result = arrayFilter(result, index => this.isSkipped(index) === false);
+    }
+
+    return result;
   }
 
   /**
@@ -165,16 +167,19 @@ class IndexMapper {
       return this.skippedIndexesCache;
     }
 
+    if (this.skipCollection.getLength() === 0) {
+      return [];
+    }
+
+    const result = [];
     const particularSkipsLists = arrayMap(this.skipCollection.get(), skipList => skipList.getValues());
-    const skipBooleansForIndex = pivot(particularSkipsLists);
+    const length = particularSkipsLists[0].length;
 
-    return arrayReduce(skipBooleansForIndex, (skippedIndexesResult, skipIndexesAtIndex, physicalIndex) => {
-      if (skipIndexesAtIndex.some(isSkipped => isSkipped === true)) {
-        return skippedIndexesResult.concat(physicalIndex);
-      }
+    for (let i = 0; i < length; i++) {
+      result[i] = particularSkipsLists.some(list => list[i]);
+    }
 
-      return skippedIndexesResult;
-    }, []);
+    return result;
   }
 
   /**
@@ -185,7 +190,11 @@ class IndexMapper {
    * @returns {Boolean}
    */
   isSkipped(physicalIndex) {
-    return this.getSkippedIndexes().includes(physicalIndex);
+    return this.getSkippedIndexes()[physicalIndex] || false;
+  }
+
+  hasSkippedIndexes() {
+    return this.getSkippedIndexes().some(v => v === true);
   }
 
   /**

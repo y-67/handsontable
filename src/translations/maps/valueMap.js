@@ -6,13 +6,6 @@ import BaseMap from './baseMap';
  * Map from physical index to value.
  */
 class ValueMap extends BaseMap {
-  constructor(initValueOrFn = index => index) {
-    super(initValueOrFn);
-
-    this.list = [];
-    this.initValueOrFn = initValueOrFn;
-  }
-
   /**
    * Add values to list and reorganize.
    *
