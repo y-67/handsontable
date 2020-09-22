@@ -2,6 +2,7 @@ import IndexMap from './indexMap';
 import { getListWithRemovedItems, getListWithInsertedItems } from './utils/physicallyIndexed';
 import { getDecreasedIndexes, getIncreasedIndexes } from './utils/actionsOnIndexes';
 import { isFunction } from '../../helpers/function';
+import { isObject } from '../../helpers/object';
 
 /**
  * Map for storing mappings from an physical index to a value.
@@ -46,12 +47,23 @@ class QueuedPhysicalIndexToValueMap extends IndexMap {
     super.remove(removedIndexes);
   }
 
+  /**
+   * Add new value to queue of values. Some values may be stored in a certain order.
+   *
+   * Note: Queued value will be added at the end of the queue.
+   *
+   * @param {number} index The index.
+   * @param {*} value The value to save.
+   */
   addQueuedValue(index, value) {
     this.setValueAtIndex(index, value);
 
     this.queueOfIndexes.push(index);
   }
 
+  /**
+   * Remove every queued value.
+   */
   removeQueuedValues() {
     if (isFunction(this.initValueOrFn)) {
       this.queueOfIndexes.forEach((physicalIndex) => {
@@ -67,22 +79,37 @@ class QueuedPhysicalIndexToValueMap extends IndexMap {
     this.queueOfIndexes = [];
   }
 
+  /**
+   * Get every queued value. Include index as an object key when needed (when method's argument was used).
+   *
+   * @param {undefined|string} indexAsKey Extends element from index map by defined key. It will contain index related to the value.
+   * @returns {Array}
+   */
   getQueuedValues(indexAsKey) {
     // Include index as part of the value
     if (typeof indexAsKey === 'string') {
       return this.queueOfIndexes.map((physicalIndex) => {
         const value = this.getValueAtIndex(physicalIndex);
 
-        return {
-          ...value,
-          [indexAsKey]: physicalIndex,
-        };
+        if (isObject(value)) {
+          return {
+            ...value,
+            [indexAsKey]: physicalIndex,
+          };
+        }
+
+        return value;
       });
     }
 
     return this.queueOfIndexes.map(physicalIndex => this.getValueAtIndex(physicalIndex));
   }
 
+  /**
+   * Get sequence of indexes related to values which have been queued.
+   *
+   * @returns {Array}
+   */
   getIndexesQueue() {
     return this.queueOfIndexes;
   }
