@@ -55,8 +55,8 @@ class QueuedPhysicalIndexToValueMap extends IndexMap {
    * @param {number} index The index.
    * @param {*} value The value to save.
    */
-  addQueuedValue(index, value) {
-    this.setValueAtIndex(index, value);
+  setValueAtIndex(index, value) {
+    super.setValueAtIndex(index, value);
 
     this.queueOfIndexes.push(index);
   }
@@ -64,15 +64,15 @@ class QueuedPhysicalIndexToValueMap extends IndexMap {
   /**
    * Remove every queued value.
    */
-  removeQueuedValues() {
+  clear() {
     if (isFunction(this.initValueOrFn)) {
       this.queueOfIndexes.forEach((physicalIndex) => {
-        this.setValueAtIndex(physicalIndex, this.initValueOrFn(physicalIndex));
+        super.setValueAtIndex(physicalIndex, this.initValueOrFn(physicalIndex));
       });
 
     } else {
       this.queueOfIndexes.forEach((physicalIndex) => {
-        this.setValueAtIndex(physicalIndex, this.initValueOrFn);
+        super.setValueAtIndex(physicalIndex, this.initValueOrFn);
       });
     }
 
@@ -80,29 +80,12 @@ class QueuedPhysicalIndexToValueMap extends IndexMap {
   }
 
   /**
-   * Get every queued value. Include index as an object key when needed (when method's argument was used).
+   * Get every queued value.
    *
-   * @param {undefined|string} indexAsKey Extends element from index map by defined key. It will contain index related to the value.
    * @returns {Array}
    */
-  getQueuedValues(indexAsKey) {
-    // Include index as part of the value
-    if (typeof indexAsKey === 'string') {
-      return this.queueOfIndexes.map((physicalIndex) => {
-        const value = this.getValueAtIndex(physicalIndex);
-
-        if (isObject(value)) {
-          return {
-            ...value,
-            [indexAsKey]: physicalIndex,
-          };
-        }
-
-        return value;
-      });
-    }
-
-    return this.queueOfIndexes.map(physicalIndex => this.getValueAtIndex(physicalIndex));
+  getEntries() {
+    return this.queueOfIndexes.map(physicalIndex => [physicalIndex, this.getValueAtIndex(physicalIndex)]);
   }
 
   /**

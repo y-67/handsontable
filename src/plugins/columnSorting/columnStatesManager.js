@@ -1,5 +1,6 @@
 import { isObject, objectEach } from '../../helpers/object';
 import { QueuedPhysicalIndexToValueMap as IndexToValueMap } from '../../translations';
+import {isDefined} from '../../helpers/mixed';
 
 const inheritedColumnProperties = ['sortEmptyCells', 'indicator', 'headerAction', 'compareFunctionFactory'];
 
@@ -129,7 +130,7 @@ export class ColumnStatesManager {
    * @returns {boolean}
    */
   isListOfSortedColumnsEmpty() {
-    return this.sortingStates.getIndexesQueue().length === 0;
+    return this.getNumberOfSortedColumns() === 0;
   }
 
   /**
@@ -154,8 +155,15 @@ export class ColumnStatesManager {
       return [];
     }
 
-    return this.sortingStates.getQueuedValues('column').map(({ column, ...restOfSortingState }) =>
-      ({ column: this.hot.toVisualColumn(column), ...restOfSortingState }));
+    const sortingStatesQueue = this.sortingStates.getEntries();
+    const firstSortState = sortingStatesQueue[0];
+    const isSortStateObject = isDefined(firstSortState) && isObject(firstSortState[1]);
+
+    if (isSortStateObject === false) {
+      return sortingStatesQueue.map(([column, value]) => ({ column: this.hot.toVisualColumn(column), value }));
+    }
+
+    return sortingStatesQueue.map(([column, value]) => ({ column: this.hot.toVisualColumn(column), ...value }));
   }
 
   /**
@@ -185,10 +193,10 @@ export class ColumnStatesManager {
    * @param {Array} sortStates Sort states.
    */
   setSortStates(sortStates) {
-    this.sortingStates.removeQueuedValues();
+    this.sortingStates.clear();
 
     for (let i = 0; i < sortStates.length; i += 1) {
-      this.sortingStates.addQueuedValue(this.hot.toPhysicalColumn(sortStates[i].column), {
+      this.sortingStates.setValueAtIndex(this.hot.toPhysicalColumn(sortStates[i].column), {
         sortOrder: sortStates[i].sortOrder
       });
     }
